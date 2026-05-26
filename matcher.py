@@ -30,6 +30,7 @@ _DEFAULT_ANALYSIS: dict = {
     "missing_skills": [],
     "reasoning": "Analysis unavailable",
     "company_hook": "",
+    "exp_required_years": 0,  # 0 = not stated / entry-level assumed
 }
 
 
@@ -47,13 +48,14 @@ def _build_match_prompt(job: dict) -> str:
         f"COMPANY: {job.get('company', 'N/A')}\n"
         f"DESCRIPTION: {job.get('description', 'No description provided.')}\n\n"
         f"Return ONLY valid JSON, no markdown, no explanation:\n"
-        f'{{\n'
-        f'  "match_percent": <integer 0-100>,\n'
-        f'  "matched_skills": [<list of matching skills, max 6>],\n'
-        f'  "missing_skills": [<list of required skills candidate lacks, max 4>],\n'
-        f'  "reasoning": "<one sentence explanation>",\n'
-        f'  "company_hook": "<one specific sentence about this company that shows genuine interest, for use in email>"\n'
-        f'}}'
+        "{{\n"
+        '  "match_percent": <integer 0-100>,\n'
+        '  "matched_skills": [<list of matching skills, max 6>],\n'
+        '  "missing_skills": [<list of required skills candidate lacks, max 4>],\n'
+        '  "reasoning": "<one sentence explanation>",\n'
+        '  "company_hook": "<one specific sentence about this company that shows genuine interest, for use in email>",\n'
+        '  "exp_required_years": <integer: minimum years of experience explicitly required; use 0 if entry-level or not mentioned>\n'
+        "}}"
     )
 
 
@@ -91,7 +93,9 @@ def match_job(job: dict) -> dict:
         analysis.setdefault("missing_skills", [])
         analysis.setdefault("reasoning", "")
         analysis.setdefault("company_hook", "")
+        analysis.setdefault("exp_required_years", 0)
         analysis["match_percent"] = max(0, min(100, int(analysis["match_percent"])))
+        analysis["exp_required_years"] = max(0, int(analysis.get("exp_required_years") or 0))
 
         time.sleep(0.5)
         return analysis
@@ -104,3 +108,12 @@ def match_job(job: dict) -> dict:
 
 def is_match(job_analysis: dict, threshold: int = MATCH_THRESHOLD) -> bool:
     return int(job_analysis.get("match_percent", 0)) >= threshold
+
+
+def is_experience_fit(job_analysis: dict, max_years: int = 2) -> bool:
+    """
+    Return True if the job's required experience is within the candidate's range.
+    0 means not stated — we treat that as entry-level and allow it.
+    """
+    required = int(job_analysis.get("exp_required_years") or 0)
+    return required <= max_years

@@ -18,8 +18,9 @@ logger = setup_logging()
 
 # ── Local module imports ───────────────────────────────────────────────────
 from scraper import scrape_all_jobs
-from matcher import match_job, is_match
+from matcher import match_job, is_match, is_experience_fit
 from emailer import generate_email, send_email, save_draft
+from email_hunter import hunt_email
 from storage import (
     load_applied,
     save_applied,
@@ -94,6 +95,15 @@ def run_agent() -> None:
                 )
                 continue
 
+            # ── d2. Filter by experience requirement ───────────────────────
+            exp_req = analysis.get("exp_required_years", 0)
+            if not is_experience_fit(analysis):
+                logger.info(
+                    f"  SKIP {title} @ {company} "
+                    f"— requires {exp_req}+ yrs experience (candidate has 1 yr)"
+                )
+                continue
+
             # ── d. It's a match! ───────────────────────────────────────────
             jobs_matched += 1
             logger.info(f"  MATCH {pct}% — {title} @ {company}")
@@ -103,15 +113,18 @@ def run_agent() -> None:
             subject = email_content.get("subject", "Application")
             body    = email_content.get("body", "")
 
-            # ── f. Send or draft ───────────────────────────────────────────
+            # ── f. Hunt for email if not already in job data ──────────────
             to_email = job.get("email", "").strip()
+            if not to_email:
+                to_email = hunt_email(job) or ""
+
+            # ── g. Send or draft ───────────────────────────────────────────
             if to_email:
                 logger.info(f"  Sending email to {to_email}…")
                 sent = send_email(to_email, subject, body)
                 if sent:
                     jobs_emailed += 1
                 else:
-                    # Sending failed — save draft so the candidate can send manually
                     logger.warning(
                         f"  Send failed — falling back to draft for {title} @ {company}"
                     )
@@ -119,7 +132,7 @@ def run_agent() -> None:
                     jobs_drafted += 1
             else:
                 logger.info(
-                    f"  No email found — saving draft to drafts/{company}_{title}.txt"
+                    f"  No email found after deep hunt — saving draft."
                 )
                 save_draft(job, subject, body)
                 jobs_drafted += 1

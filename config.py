@@ -20,6 +20,91 @@ GMAIL_APP_PASSWORD: str = os.getenv("GMAIL_APP_PASSWORD", "")
 MATCH_THRESHOLD: int = int(os.getenv("MATCH_THRESHOLD", "40"))
 MAX_JOBS_PER_RUN: int = int(os.getenv("MAX_JOBS_PER_RUN", "20"))
 
+# ── Target job titles ──────────────────────────────────────────────────────
+# Jobs whose title does NOT match at least one of these keywords (case-insensitive)
+# will be filtered out before being sent to the LLM matcher, saving API calls.
+# Add or remove titles freely; partial matches work (e.g. "react" matches "React Developer").
+TARGET_JOB_TITLES: list[str] = [
+    # Generic software roles
+    "software engineer",
+    "software developer",
+    "software development engineer",
+    "sde",
+    "swe",
+    "junior developer",
+    "junior engineer",
+    "associate engineer",
+    "associate developer",
+    "graduate engineer",
+    "entry level engineer",
+    # Levelled variants
+    "sde 1",
+    "sde i",
+    "sde-1",
+    "engineer 1",
+    "engineer i",
+    "l3",
+    "l4",
+    # .NET / C# specific
+    ".net developer",
+    ".net engineer",
+    "dotnet developer",
+    "dotnet engineer",
+    "asp.net",
+    "c# developer",
+    "c# engineer",
+    # Full-stack
+    "full stack",
+    "fullstack",
+    "full-stack",
+    # Backend
+    "backend developer",
+    "backend engineer",
+    "back end developer",
+    "back-end developer",
+    "back-end engineer",
+    "api developer",
+    "api engineer",
+    "node.js developer",
+    "nodejs developer",
+    "python developer",
+    "python engineer",
+    "django developer",
+    "flask developer",
+    # Frontend
+    "frontend developer",
+    "frontend engineer",
+    "front end developer",
+    "front-end developer",
+    "front-end engineer",
+    "react developer",
+    "react engineer",
+    "ui developer",
+    "ui engineer",
+    "typescript developer",
+    # DevOps / cloud adjacent
+    "devops engineer",
+    "cloud engineer",
+    "platform engineer",
+    "site reliability engineer",
+    "sre",
+    # Microservices / distributed systems
+    "microservices",
+    "distributed systems",
+    # IoT / embedded (for ESP32 / firmware work)
+    "embedded engineer",
+    "iot engineer",
+    "firmware engineer",
+    # AI / ML adjacent
+    "ai engineer",
+    "ml engineer",
+    "machine learning engineer",
+    # Generic catch-alls that often appear in entry-level listings
+    "software",        # e.g. "Software Intern", "Software Trainee"
+    "developer",
+    "engineer",
+]
+
 # ── Storage / logging ──────────────────────────────────────────────────────
 STORAGE_FILE: str = os.getenv("STORAGE_FILE", "jobs_applied.json")
 LOG_FILE: str = os.getenv("LOG_FILE", "agent.log")

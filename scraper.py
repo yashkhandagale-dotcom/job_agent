@@ -23,7 +23,7 @@ from typing import Optional
 
 import httpx
 
-from config import MAX_JOBS_PER_RUN
+from config import MAX_JOBS_PER_RUN, TARGET_JOB_TITLES
 
 logger = logging.getLogger("job_agent")
 
@@ -86,6 +86,22 @@ def _dedup(jobs: list[dict]) -> list[dict]:
             seen.add(key)
             unique.append(job)
     return unique
+
+
+def _filter_by_title(jobs: list[dict]) -> list[dict]:
+    """
+    Keep only jobs whose title contains at least one keyword from TARGET_JOB_TITLES.
+    Comparison is case-insensitive. This runs before the LLM matcher to save API calls.
+    """
+    matched: list[dict] = []
+    for job in jobs:
+        title_lower = job.get("title", "").lower()
+        if any(kw.lower() in title_lower for kw in TARGET_JOB_TITLES):
+            matched.append(job)
+        else:
+            logger.debug(f"Title filter skipped: '{job.get('title')}' @ {job.get('company')}")
+    logger.info(f"Title filter: {len(jobs)} → {len(matched)} job(s) kept.")
+    return matched
 
 
 # ── Remotive scraper ───────────────────────────────────────────────────────
@@ -250,10 +266,12 @@ async def scrape_all_jobs() -> list[dict]:
 
     all_jobs = remotive_jobs + muse_jobs + jobicy_jobs
     unique_jobs = _dedup(all_jobs)
-    capped = unique_jobs[:MAX_JOBS_PER_RUN]
+    relevant_jobs = _filter_by_title(unique_jobs)
+    capped = relevant_jobs[:MAX_JOBS_PER_RUN]
 
     logger.info(
         f"Total scraped: {len(all_jobs)}, after dedup: {len(unique_jobs)}, "
+        f"after title filter: {len(relevant_jobs)}, "
         f"capped at {MAX_JOBS_PER_RUN}: {len(capped)}"
     )
     return capped
